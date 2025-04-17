@@ -145,6 +145,7 @@ onBeforeUnmount(() => {
           >
             + Add Column
           </button>
+          <KeyboardShortcuts />
           <div class="group relative">
             <button
               @click="triggerBackup"
@@ -186,7 +187,6 @@ onBeforeUnmount(() => {
               ↻
             </button>
           </div>
-          <KeyboardShortcuts />
           <ConnectionIndicator />
         </div>
       </div>
