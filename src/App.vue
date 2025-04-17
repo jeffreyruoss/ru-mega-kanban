@@ -39,7 +39,11 @@ function triggerBackup() {
         notificationRef.value.showNotification(`Backup failed: ${error}`, 'error')
       }
     },
-  )
+  ).catch((error) => {
+    if (notificationRef.value) {
+      notificationRef.value.showNotification(`Backup failed: ${error}`, 'error')
+    }
+  })
 }
 
 // Handle backup notifications
