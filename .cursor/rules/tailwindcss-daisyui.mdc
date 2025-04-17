@@ -10,4 +10,4 @@ Write code that is clean, professional and most importantly, easy to read/unders
 
 Write code that follows the style of the code that is already there. If the code that is already there could be better, let me know and ask without make the change yet.
 
-No need to run npm run dev - I always leave it running.
+No need to ever suggest run npm run dev - I always leave it running.
