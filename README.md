@@ -11,6 +11,7 @@ A Vue 3 kanban board application with Supabase integration for data persistence.
 - Dark theme support with DaisyUI
 - Cloud synchronization with Supabase
 - Offline capability with localStorage
+- Trash functionality with item restoration
 
 ## Tech Stack
 
@@ -67,7 +68,8 @@ pnpm format
 2. Add cards to each column to track tasks or items
 3. Drag and drop cards between columns to update their status
 4. Drag and drop columns to reorganize your board layout
-5. All changes are automatically synchronized with Supabase when online
+5. Deleted items are moved to trash and can be restored if needed
+6. All changes are automatically synchronized with Supabase when online
 
 ## Project Structure
 

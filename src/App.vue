@@ -8,6 +8,7 @@ import BackupButton from './components/BackupButton.vue'
 import HiddenColumns from './components/HiddenColumns.vue'
 import SyncStatus from './components/SyncStatus.vue'
 import StatusMessages from './components/StatusMessages.vue'
+import TrashButton from './components/TrashButton.vue'
 import { useKanbanStore } from './stores/kanban'
 import { setupAutoBackup, backupLocalStorage } from './lib/backup'
 import { ref, onMounted } from 'vue'
@@ -106,6 +107,7 @@ onMounted(() => {
             :onBackupCreated="handleBackupCreated"
             :onBackupFailed="handleBackupFailed"
           />
+          <TrashButton />
           <SyncStatus
             :error="kanbanStore.error"
             :isLoading="kanbanStore.isLoading"

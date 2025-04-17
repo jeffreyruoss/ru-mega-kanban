@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { supabase } from '../lib/supabase'
+import { useTrashStore } from './trash'
 
 const STORAGE_KEY = 'ru-mega-kanban-data'
 const PROJECT_NAME_KEY = 'ru-mega-kanban-project-name'
@@ -237,7 +238,16 @@ export const useKanbanStore = defineStore('kanban', () => {
     if (column) {
       const blockIndex = column.blocks.findIndex((b) => b.id === blockId)
       if (blockIndex !== -1 && column.blocks.length > 1) {
-        // Don't delete the last block in a column
+        // Get the trash store
+        const trashStore = useTrashStore()
+
+        // Get block before removing it
+        const block = column.blocks[blockIndex]
+
+        // Add to trash
+        trashStore.addTrashedBlock(block, columnId, column.title)
+
+        // Remove from column
         column.blocks.splice(blockIndex, 1)
         return true
       }
@@ -248,6 +258,16 @@ export const useKanbanStore = defineStore('kanban', () => {
   function deleteColumn(columnId) {
     const columnIndex = columns.value.findIndex((c) => c.id === columnId)
     if (columnIndex !== -1) {
+      // Get the trash store
+      const trashStore = useTrashStore()
+
+      // Get column before removing it
+      const column = columns.value[columnIndex]
+
+      // Add to trash
+      trashStore.addTrashedColumn(column)
+
+      // Remove from columns
       columns.value.splice(columnIndex, 1)
       return true
     }
@@ -297,6 +317,20 @@ export const useKanbanStore = defineStore('kanban', () => {
     return true
   }
 
+  function restoreColumnFromTrash(column) {
+    columns.value.push(column)
+    return true
+  }
+
+  function restoreBlockToColumn(block, columnId) {
+    const column = columns.value.find((c) => c.id === columnId)
+    if (column) {
+      column.blocks.push(block)
+      return true
+    }
+    return false
+  }
+
   return {
     columns,
     projectName,
@@ -312,5 +346,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     reorderColumns,
     reorderBlocks,
     loadFromSupabase,
+    restoreColumnFromTrash,
+    restoreBlockToColumn,
   }
 })
