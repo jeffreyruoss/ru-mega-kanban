@@ -12,7 +12,7 @@ const MIN_BACKUP_INTERVAL = 60 * 60 * 1000 // 1 hour in milliseconds
  * Creates and downloads a backup of localStorage data
  * @param {Function} onSuccess - Optional callback when backup is successful
  * @param {Function} onError - Optional callback when backup fails
- * @returns {string|null} The filename of the created backup or null if failed
+ * @returns {Promise<string|null>} The filename of the created backup or null if failed
  */
 export async function backupLocalStorage(onSuccess, onError) {
   try {

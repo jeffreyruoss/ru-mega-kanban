@@ -26,24 +26,28 @@ function reloadData() {
 }
 
 // Create a backup with notification
-function triggerBackup() {
+async function triggerBackup() {
   // Manual backups always work, even if less than an hour since last backup
-  backupLocalStorage(
-    (fileName) => {
-      if (notificationRef.value) {
-        notificationRef.value.showNotification(`Backup created: ${fileName}`, 'success')
-      }
-    },
-    (error) => {
-      if (notificationRef.value) {
-        notificationRef.value.showNotification(`Backup failed: ${error}`, 'error')
-      }
-    },
-  ).catch((error) => {
+  try {
+    // We'll use callbacks for immediate response
+    // and also await the promise for handling errors
+    await backupLocalStorage(
+      (fileName) => {
+        if (notificationRef.value) {
+          notificationRef.value.showNotification(`Backup created: ${fileName}`, 'success')
+        }
+      },
+      (error) => {
+        if (notificationRef.value) {
+          notificationRef.value.showNotification(`Backup failed: ${error}`, 'error')
+        }
+      },
+    )
+  } catch (error) {
     if (notificationRef.value) {
       notificationRef.value.showNotification(`Backup failed: ${error}`, 'error')
     }
-  })
+  }
 }
 
 // Handle backup notifications
