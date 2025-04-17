@@ -1,5 +1,6 @@
 <script setup>
-import { defineProps, defineEmits, ref, defineExpose, onMounted, nextTick, watch } from 'vue'
+import { defineProps, defineEmits, ref, defineExpose, onMounted, watch } from 'vue'
+import { useTextareaAutosize } from '@vueuse/core'
 
 const props = defineProps({
   block: {
@@ -29,8 +30,29 @@ const emit = defineEmits([
   'navigate-down',
   'update:style',
 ])
+
 const textareaRef = ref(null)
 const isWarningText = ref(false)
+
+// Set up textarea autosizing with VueUse
+const { textarea, input } = useTextareaAutosize({
+  input: props.block.content || '',
+  element: textareaRef,
+})
+
+// Update the textarea value when it changes from parent
+watch(
+  () => props.block.content,
+  (newContent) => {
+    input.value = newContent || ''
+  },
+  { immediate: true },
+)
+
+// When input changes, emit update to parent
+watch(input, (newValue) => {
+  emit('update:content', newValue)
+})
 
 function handleKeydown(event) {
   if (event.key === 'Tab') {
@@ -93,7 +115,7 @@ function handleTabKey(event) {
 
     // Combine everything back together
     const newContent = beforeSelection + modifiedText + afterSelection
-    emit('update:content', newContent)
+    input.value = newContent
 
     // Adjust selection
     setTimeout(() => {
@@ -117,7 +139,7 @@ function handleTabKey(event) {
       if (currentLine.startsWith('\t')) {
         const newLine = currentLine.substring(1)
         const newContent = beforeLine + newLine + afterCurrentLine
-        emit('update:content', newContent)
+        input.value = newContent
 
         // Adjust cursor position
         setTimeout(() => {
@@ -127,7 +149,7 @@ function handleTabKey(event) {
     } else {
       // Insert tab at cursor position (existing behavior)
       const newContent = value.substring(0, start) + '\t' + value.substring(end)
-      emit('update:content', newContent)
+      input.value = newContent
 
       // Move cursor position after the inserted tab
       setTimeout(() => {
@@ -193,51 +215,10 @@ function focus() {
   textareaRef.value?.focus()
 }
 
-// Auto-resize textarea based on content
-function adjustHeight() {
-  if (!textareaRef.value) return
-
-  // Get the current content
-  const content = textareaRef.value.value
-
-  // Count number of lines (number of newlines + 1)
-  const lineCount = (content.match(/\n/g) || []).length + 1
-
-  // Calculate approximate height: base height per line + padding
-  // This approach is more consistent between dev and production
-  const lineHeight = 24 // Average line height in pixels
-  const paddingHeight = 8 // Additional padding
-  const calculatedHeight = lineHeight * lineCount + paddingHeight
-
-  // Ensure minimum height
-  const minHeight = 40
-  const finalHeight = Math.max(calculatedHeight, minHeight)
-
-  // Set the height directly with px value
-  textareaRef.value.style.height = finalHeight + 'px'
-}
-
-// Update textarea height when content changes
-function handleInput(e) {
-  emit('update:content', e.target.value)
-  nextTick(adjustHeight)
-}
-
-// Initialize height when component mounts
+// Initialize warning text state from block data
 onMounted(() => {
-  adjustHeight()
-  // Initialize the warning text state from block data if available
   isWarningText.value = props.block.isWarningText || false
 })
-
-// Watch for content changes from parent
-watch(
-  () => props.block.content,
-  () => {
-    nextTick(adjustHeight)
-  },
-  { immediate: true },
-)
 
 function handleDragStart(event) {
   // Set data for the drag operation
@@ -288,9 +269,8 @@ defineExpose({
       </svg>
     </div>
     <textarea
-      ref="textareaRef"
-      :value="block.content"
-      @input="handleInput"
+      ref="textarea"
+      v-model="input"
       @keydown="handleKeydown"
       placeholder="Enter text here..."
       class="w-full p-1 pl-6 min-h-[40px] overflow-y-hidden transition-colors focus:border-primary border-none text-base resize-none bg-transparent"
@@ -317,5 +297,11 @@ textarea {
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
   box-sizing: border-box !important;
+  -ms-overflow-style: none !important; /* Hide scrollbar in IE and Edge */
+  scrollbar-width: none !important; /* Hide scrollbar in Firefox */
+}
+/* Hide scrollbar in Webkit/Blink browsers */
+textarea::-webkit-scrollbar {
+  display: none !important;
 }
 </style>
