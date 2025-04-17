@@ -1,7 +1,7 @@
 <script setup>
 import { useTrashStore } from '../stores/trash'
 import { useKanbanStore } from '../stores/kanban'
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 
 const trashStore = useTrashStore()
 const kanbanStore = useKanbanStore()
@@ -80,8 +80,11 @@ function timeAgo(dateString) {
   }
 }
 
-// Load trash data from Supabase when component is mounted
-trashStore.loadFromSupabase()
+// Load trash data and run cleanup when component is mounted
+onMounted(async () => {
+  await trashStore.loadFromSupabase()
+  trashStore.cleanupOldTrashItems()
+})
 </script>
 
 <template>

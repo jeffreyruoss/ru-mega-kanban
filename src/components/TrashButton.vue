@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTrashStore } from '../stores/trash'
 import TrashView from './TrashView.vue'
 
@@ -14,8 +14,14 @@ function toggleTrashModal() {
   showTrashModal.value = !showTrashModal.value
 }
 
-// Load trash data from Supabase
-trashStore.loadFromSupabase()
+// Loading and cleanup operations
+onMounted(async () => {
+  // First load trash data from Supabase
+  await trashStore.loadFromSupabase()
+
+  // Then run cleanup to remove items older than 30 days
+  trashStore.cleanupOldTrashItems()
+})
 </script>
 
 <template>

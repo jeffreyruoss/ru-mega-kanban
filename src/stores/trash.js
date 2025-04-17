@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { supabase } from '../lib/supabase'
 
 const TRASH_STORAGE_KEY = 'ru-mega-kanban-trash'
+const LAST_EMPTIED_TRASH_KEY = 'ru-mega-kanban-last-emptied-trash'
 
 export const useTrashStore = defineStore('trash', () => {
   // Initialize from localStorage or empty array
@@ -196,6 +197,53 @@ export const useTrashStore = defineStore('trash', () => {
     return false
   }
 
+  function cleanupOldTrashItems() {
+    // Check if we've already done cleanup today
+    const lastEmptied = localStorage.getItem(LAST_EMPTIED_TRASH_KEY)
+    const today = new Date().toDateString()
+
+    if (lastEmptied === today) {
+      // Already cleaned up today, skip
+      return false
+    }
+
+    // Track if anything was deleted
+    let anyItemsDeleted = false
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    // Filter out columns older than 30 days
+    const initialColumnsCount = trashedItems.value.columns.length
+    trashedItems.value.columns = trashedItems.value.columns.filter((column) => {
+      if (!column.deletedAt) return true
+
+      const deletedDate = new Date(column.deletedAt)
+      return deletedDate > thirtyDaysAgo
+    })
+
+    // Filter out blocks older than 30 days
+    const initialBlocksCount = trashedItems.value.blocks.length
+    trashedItems.value.blocks = trashedItems.value.blocks.filter((block) => {
+      if (!block.deletedAt) return true
+
+      const deletedDate = new Date(block.deletedAt)
+      return deletedDate > thirtyDaysAgo
+    })
+
+    // Check if any items were deleted
+    anyItemsDeleted =
+      initialColumnsCount > trashedItems.value.columns.length ||
+      initialBlocksCount > trashedItems.value.blocks.length
+
+    // Save the date we did the cleanup
+    if (anyItemsDeleted) {
+      localStorage.setItem(LAST_EMPTIED_TRASH_KEY, today)
+      saveData() // Persist changes to localStorage and Supabase
+    }
+
+    return anyItemsDeleted
+  }
+
   return {
     trashedItems,
     addTrashedColumn,
@@ -205,5 +253,6 @@ export const useTrashStore = defineStore('trash', () => {
     clearTrash,
     deleteItemPermanently,
     loadFromSupabase,
+    cleanupOldTrashItems,
   }
 })
