@@ -1,13 +1,17 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { supabase } from '../lib/supabase'
 
 const TRASH_STORAGE_KEY = 'ru-mega-kanban-trash'
 const LAST_EMPTIED_TRASH_KEY = 'ru-mega-kanban-last-emptied-trash'
+const TRASH_RETENTION_DAYS = 30
 
 export const useTrashStore = defineStore('trash', () => {
   // Initialize from localStorage or empty array
   const trashedItems = ref(loadFromLocalStorage())
+
+  // Computed property for retention days
+  const retentionDays = computed(() => TRASH_RETENTION_DAYS)
 
   // Setup persistence
   watch(trashedItems, saveData, { deep: true })
@@ -209,25 +213,25 @@ export const useTrashStore = defineStore('trash', () => {
 
     // Track if anything was deleted
     let anyItemsDeleted = false
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const retentionDate = new Date()
+    retentionDate.setDate(retentionDate.getDate() - TRASH_RETENTION_DAYS)
 
-    // Filter out columns older than 30 days
+    // Filter out columns older than retention period
     const initialColumnsCount = trashedItems.value.columns.length
     trashedItems.value.columns = trashedItems.value.columns.filter((column) => {
       if (!column.deletedAt) return true
 
       const deletedDate = new Date(column.deletedAt)
-      return deletedDate > thirtyDaysAgo
+      return deletedDate > retentionDate
     })
 
-    // Filter out blocks older than 30 days
+    // Filter out blocks older than retention period
     const initialBlocksCount = trashedItems.value.blocks.length
     trashedItems.value.blocks = trashedItems.value.blocks.filter((block) => {
       if (!block.deletedAt) return true
 
       const deletedDate = new Date(block.deletedAt)
-      return deletedDate > thirtyDaysAgo
+      return deletedDate > retentionDate
     })
 
     // Check if any items were deleted
@@ -254,5 +258,6 @@ export const useTrashStore = defineStore('trash', () => {
     deleteItemPermanently,
     loadFromSupabase,
     cleanupOldTrashItems,
+    retentionDays,
   }
 })

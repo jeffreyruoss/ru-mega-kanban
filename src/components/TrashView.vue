@@ -12,6 +12,7 @@ const showBlocks = ref(true)
 // Computed properties for filtering
 const trashedColumns = computed(() => trashStore.trashedItems.columns)
 const trashedBlocks = computed(() => trashStore.trashedItems.blocks)
+const retentionPeriod = computed(() => trashStore.retentionDays)
 
 // Restore a column
 function restoreColumn(columnId) {
@@ -101,6 +102,19 @@ onMounted(async () => {
           Clear All
         </button>
       </div>
+    </div>
+
+    <!-- Trash description -->
+    <div class="card bg-base-200 mb-6 p-4 text-sm gap-3">
+      <p>
+        Items moved to trash are stored for
+        <strong>{{ retentionPeriod || 30 }} days</strong> before being automatically deleted. During
+        this time, you can restore them to your board or delete them permanently.
+      </p>
+      <p>
+        When restoring a block, it will be placed in its original column if available, or in the
+        first column as a fallback.
+      </p>
     </div>
 
     <!-- Empty state -->
