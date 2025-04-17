@@ -12,6 +12,8 @@ const props = defineProps({
 const nextBackupTime = ref(getNextBackupTimeString())
 // Timer ref for updating the countdown
 let countdownTimer = null
+// Modal state
+const isModalOpen = ref(false)
 
 // Create a backup with notification
 function triggerBackup() {
@@ -23,6 +25,8 @@ function triggerBackup() {
       }
       // Update the next backup time display
       nextBackupTime.value = getNextBackupTimeString()
+      // Close the modal after successful backup
+      closeModal()
     },
     (error) => {
       if (props.onBackupFailed) {
@@ -30,6 +34,16 @@ function triggerBackup() {
       }
     },
   )
+}
+
+// Open modal
+function openModal() {
+  isModalOpen.value = true
+}
+
+// Close modal
+function closeModal() {
+  isModalOpen.value = false
 }
 
 // Get formatted time until next backup
@@ -62,11 +76,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="group relative backup-button">
+  <div class="backup-button">
+    <!-- Button to open modal -->
     <button
-      @click="triggerBackup"
+      @click="openModal"
       class="opacity-70 hover:opacity-100 text-sm uppercase px-3 py-1 rounded-md text-white border-[1px] border-gray-700 hover:cursor-pointer"
-      title="Create and download backup of data"
+      title="Manage backups"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -86,10 +101,40 @@ onBeforeUnmount(() => {
       </svg>
       Backup
     </button>
-    <div
-      class="absolute top-full mt-2 left-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap"
-    >
-      Next auto-backup: {{ nextBackupTime }}
-    </div>
+
+    <!-- Modal dialog -->
+    <dialog :open="isModalOpen" class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-2xl pb-4">Backup Manager</h3>
+
+        <div class="flex flex-col gap-4">
+          <div class="p-4 rounded-lg border-[1px] border-gray-700">
+            <h4 class="font-semibold text-lg mb-2">About Backups</h4>
+            <p class="mb-3">
+              Backups allow you to save your Kanban board data to your local device. Your data is
+              automatically backed up hourly while you use the application.
+            </p>
+            <p>Backups are saved as JSON files that can be imported later if needed.</p>
+          </div>
+
+          <div
+            class="p-4 rounded-lg flex items-center justify-between border-[1px] border-gray-700"
+          >
+            <div>
+              <h4 class="font-semibold text-lg">Next Auto-Backup</h4>
+              <p class="text-primary">{{ nextBackupTime }}</p>
+            </div>
+            <button @click="triggerBackup" class="btn">Create and Download Backup</button>
+          </div>
+        </div>
+
+        <div class="modal-action pt-4">
+          <button @click="closeModal" class="btn">Close</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop" @click="closeModal">
+        <button>Close</button>
+      </form>
+    </dialog>
   </div>
 </template>
