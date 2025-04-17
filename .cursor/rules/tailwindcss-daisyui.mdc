@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+Use tailwindcss/daisyui dark theme defaults (already installed via CDN) for most things but ok to use css at the bottom of the component when it makes sense and/or when it is easier to read and/or maintain that way.
+
+Write code that is clean, professional and most importantly, easy to read/understand.
+
+Write code that follows the style of the code that is already there. If the code that is already there could be better, let me know and ask without make the change yet.
+
+No need to run npm run dev - I always leave it running.
