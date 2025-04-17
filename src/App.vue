@@ -9,15 +9,23 @@ import HiddenColumns from './components/HiddenColumns.vue'
 import SyncStatus from './components/SyncStatus.vue'
 import StatusMessages from './components/StatusMessages.vue'
 import TrashButton from './components/TrashButton.vue'
+import UndoLastBlockDelete from './components/UndoLastBlockDelete.vue'
 import { useKanbanStore } from './stores/kanban'
+import { useTrashStore } from './stores/trash'
 import { setupAutoBackup, backupLocalStorage } from './lib/backup'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
 const kanbanStore = useKanbanStore()
+const trashStore = useTrashStore()
 // Add a ref to access the MainBoard component
 const mainBoardRef = ref(null)
 // Add a ref to access the notification component
 const notificationRef = ref(null)
+
+// Computed property to check if there are blocks in trash
+const hasDeletedBlocks = computed(() => {
+  return trashStore.trashedItems.blocks.length > 0
+})
 
 // Load data is already handled in the store initialization
 function reloadData() {
@@ -107,6 +115,7 @@ onMounted(() => {
             :onBackupCreated="handleBackupCreated"
             :onBackupFailed="handleBackupFailed"
           />
+          <UndoLastBlockDelete v-if="hasDeletedBlocks" />
           <TrashButton />
           <SyncStatus
             :error="kanbanStore.error"
