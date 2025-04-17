@@ -2,17 +2,100 @@
 import MainBoard from './components/MainBoard.vue'
 import ConnectionIndicator from './components/ConnectionIndicator.vue'
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
+import BackupNotification from './components/BackupNotification.vue'
 import { useKanbanStore } from './stores/kanban'
-import { ref } from 'vue'
+import {
+  setupAutoBackup,
+  backupLocalStorage,
+  shouldCreateBackup,
+  getTimeUntilNextBackup,
+} from './lib/backup'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 
 const kanbanStore = useKanbanStore()
 // Add a ref to access the MainBoard component
 const mainBoardRef = ref(null)
+// Add a ref to access the notification component
+const notificationRef = ref(null)
+// Ref for next backup time display
+const nextBackupTime = ref(getNextBackupTimeString())
+// Timer ref for updating the countdown
+let countdownTimer = null
 
 // Load data is already handled in the store initialization
 function reloadData() {
   kanbanStore.loadFromSupabase()
+  // Also create a backup when data is manually reloaded
+  triggerBackup()
 }
+
+// Create a backup with notification
+function triggerBackup() {
+  // Manual backups always work, even if less than an hour since last backup
+  backupLocalStorage(
+    (fileName) => {
+      if (notificationRef.value) {
+        notificationRef.value.showNotification(`Backup created: ${fileName}`, 'success')
+      }
+      // Update the next backup time display
+      nextBackupTime.value = getNextBackupTimeString()
+    },
+    (error) => {
+      if (notificationRef.value) {
+        notificationRef.value.showNotification(`Backup failed: ${error}`, 'error')
+      }
+    },
+  )
+}
+
+// Get formatted time until next backup
+function getNextBackupTimeString() {
+  if (shouldCreateBackup()) {
+    return 'Ready now'
+  }
+
+  const timeUntil = getTimeUntilNextBackup()
+  return `${timeUntil.hours}h ${timeUntil.minutes}m ${timeUntil.seconds}s`
+}
+
+// Update the countdown timer
+function updateCountdown() {
+  nextBackupTime.value = getNextBackupTimeString()
+}
+
+// Setup auto backup on load and before unload
+onMounted(() => {
+  // Setup auto backup
+  setupAutoBackup(
+    (fileName) => {
+      if (notificationRef.value) {
+        notificationRef.value.showNotification(`Auto-backup created: ${fileName}`, 'success')
+      }
+      // Update the next backup time display
+      nextBackupTime.value = getNextBackupTimeString()
+    },
+    (error) => {
+      if (notificationRef.value) {
+        notificationRef.value.showNotification(`Auto-backup failed: ${error}`, 'error')
+      }
+    },
+    (skipMessage) => {
+      console.log(skipMessage)
+      // For auto-backups that are skipped, we'll just log to console
+      // But we won't show a notification to the user to avoid confusion
+    },
+  )
+
+  // Setup countdown refresh timer
+  countdownTimer = setInterval(updateCountdown, 1000)
+})
+
+// Clean up timer when component is destroyed
+onBeforeUnmount(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+  }
+})
 </script>
 
 <template>
@@ -62,6 +145,20 @@ function reloadData() {
           >
             + Add Column
           </button>
+          <div class="group relative">
+            <button
+              @click="triggerBackup"
+              class="opacity-70 hover:opacity-100 text-sm uppercase px-3 py-1 rounded-md text-white border-[1px] border-gray-700 hover:cursor-pointer"
+              title="Create and download backup of data"
+            >
+              💾 Backup
+            </button>
+            <div
+              class="absolute bottom-full mb-2 left-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap"
+            >
+              Next auto-backup: {{ nextBackupTime }}
+            </div>
+          </div>
           <div class="flex items-center">
             <span v-if="kanbanStore.error" class="text-error text-xs">Offline mode</span>
             <span v-else class="text-success text-xs">Synced</span>
@@ -85,5 +182,6 @@ function reloadData() {
     <main class="flex-1 pt-1 px-2">
       <MainBoard ref="mainBoardRef" />
     </main>
+    <BackupNotification ref="notificationRef" />
   </div>
 </template>
