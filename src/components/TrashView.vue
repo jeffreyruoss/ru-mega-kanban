@@ -13,6 +13,9 @@ const showBlocks = ref(true)
 const trashedColumns = computed(() => trashStore.trashedItems.columns)
 const trashedBlocks = computed(() => trashStore.trashedItems.blocks)
 const retentionPeriod = computed(() => trashStore.retentionDays)
+const trashSize = computed(() => trashStore.trashSize)
+const totalItems = computed(() => trashStore.totalItemCount)
+const totalBlocks = computed(() => trashStore.totalBlockCount)
 
 // Restore a column
 function restoreColumn(columnId) {
@@ -89,9 +92,16 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="trash-view">
+  <div class="trash-view flex flex-col gap-3">
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold">Trash</h2>
+      <div>
+        <h2 class="text-xl font-bold">Trash</h2>
+        <p v-if="totalItems > 0" class="text-xs text-base-content/60">
+          {{ totalItems }} item{{ totalItems !== 1 ? 's' : '' }} ({{ totalBlocks }} total block{{
+            totalBlocks !== 1 ? 's' : ''
+          }}) · {{ trashSize }}
+        </p>
+      </div>
       <div class="flex gap-2">
         <button @click="$emit('close')" class="btn btn-sm btn-ghost">Close</button>
         <button

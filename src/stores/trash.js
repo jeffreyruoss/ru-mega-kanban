@@ -13,6 +13,37 @@ export const useTrashStore = defineStore('trash', () => {
   // Computed property for retention days
   const retentionDays = computed(() => TRASH_RETENTION_DAYS)
 
+  // Count all items in trash (columns and top-level blocks)
+  const totalItemCount = computed(() => {
+    return trashedItems.value.columns.length + trashedItems.value.blocks.length
+  })
+
+  // Count all blocks (including those in columns)
+  const totalBlockCount = computed(() => {
+    const topLevelBlocks = trashedItems.value.blocks.length
+    const blocksInColumns = trashedItems.value.columns.reduce((acc, column) => {
+      return acc + (column.blocks?.length || 0)
+    }, 0)
+    return topLevelBlocks + blocksInColumns
+  })
+
+  // Calculate the size of trash data
+  const trashSize = computed(() => {
+    // Convert to JSON string to estimate size
+    const jsonData = JSON.stringify(trashedItems.value)
+    // Calculate size in bytes
+    const bytes = new TextEncoder().encode(jsonData).length
+
+    // Convert to appropriate unit
+    if (bytes < 1024) {
+      return `${bytes} bytes`
+    } else if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`
+    } else {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    }
+  })
+
   // Setup persistence
   watch(trashedItems, saveData, { deep: true })
 
@@ -259,5 +290,8 @@ export const useTrashStore = defineStore('trash', () => {
     loadFromSupabase,
     cleanupOldTrashItems,
     retentionDays,
+    trashSize,
+    totalItemCount,
+    totalBlockCount,
   }
 })
