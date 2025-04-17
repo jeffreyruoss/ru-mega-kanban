@@ -31,12 +31,23 @@ export const useTrashStore = defineStore('trash', () => {
 
   async function saveToSupabase() {
     try {
+      // Only attempt to save to Supabase if we have valid credentials
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.log('Skipping Supabase save - no credentials configured')
+        return
+      }
+
       // Check if we have existing trash data
-      const { data: existingData } = await supabase
+      const { data: existingData, error: fetchError } = await supabase
         .from('kanban_trash')
         .select('id')
         .order('created_at', { ascending: false })
         .limit(1)
+
+      if (fetchError) {
+        console.warn('Error fetching existing trash data:', fetchError)
+        // Continue anyway to try the insert
+      }
 
       // Save trash data - update if exists, insert if not
       if (existingData && existingData.length > 0) {
@@ -46,7 +57,22 @@ export const useTrashStore = defineStore('trash', () => {
           .update({ data: trashedItems.value })
           .eq('id', existingData[0].id)
 
-        if (dataError) throw dataError
+        if (dataError) {
+          console.error('Error updating trash data:', dataError)
+
+          // If update fails, try insert as fallback
+          if (dataError.code === '42501') {
+            // Permission denied error
+            console.log('Attempting insert as fallback...')
+            const { error: insertError } = await supabase
+              .from('kanban_trash')
+              .insert({ data: trashedItems.value })
+
+            if (insertError) throw insertError
+          } else {
+            throw dataError
+          }
+        }
       } else {
         // Insert new data
         const { error: dataError } = await supabase
@@ -57,11 +83,18 @@ export const useTrashStore = defineStore('trash', () => {
       }
     } catch (err) {
       console.error('Error saving trash data to Supabase:', err)
+      // We'll still have the local data saved even if Supabase fails
     }
   }
 
   async function loadFromSupabase() {
     try {
+      // Only attempt to load from Supabase if we have valid credentials
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.log('Skipping Supabase load - no credentials configured')
+        return
+      }
+
       // Get trash data
       const { data, error: dataError } = await supabase
         .from('kanban_trash')
@@ -70,16 +103,18 @@ export const useTrashStore = defineStore('trash', () => {
         .limit(1)
 
       if (dataError) {
-        console.error('Trash data query error:', dataError)
-        throw dataError
+        console.warn('Trash data query error:', dataError)
+        // Just continue with local data
+        return
       }
 
-      if (data && data.length > 0) {
+      if (data && data.length > 0 && data[0].data) {
         trashedItems.value = data[0].data
         localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(data[0].data))
       }
     } catch (err) {
       console.error('Error loading trash data from Supabase:', err)
+      // We'll continue with local data
     }
   }
 
