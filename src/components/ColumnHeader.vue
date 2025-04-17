@@ -28,7 +28,11 @@ function handleDragStart(event) {
 }
 
 function handleDelete() {
-  emit('delete-column')
+  // Show confirmation dialog before deleting the column
+  const confirmMessage = `Are you sure you want to delete the column "${props.title}"?`
+  if (confirm(confirmMessage)) {
+    emit('delete-column')
+  }
 }
 
 function handleToggleVisibility() {
