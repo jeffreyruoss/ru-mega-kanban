@@ -1,13 +1,6 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import {
-  backupLocalStorage,
-  shouldCreateBackup,
-  getTimeUntilNextBackup,
-  saveDirectoryHandle,
-  getBackupDirectoryName,
-  clearBackupDirectory,
-} from '../lib/backup'
+import { backupLocalStorage, shouldCreateBackup, getTimeUntilNextBackup } from '../lib/backup'
 
 // Props for notification methods
 const props = defineProps({
@@ -21,10 +14,6 @@ const nextBackupTime = ref(getNextBackupTimeString())
 let countdownTimer = null
 // Modal state
 const isModalOpen = ref(false)
-// Directory info
-const backupDirectoryName = ref(getBackupDirectoryName())
-const isDirectoryPickerSupported = ref(!!window.showDirectoryPicker)
-const isSelectingDirectory = ref(false)
 
 // Create a backup with notification
 async function triggerBackup() {
@@ -57,8 +46,6 @@ async function triggerBackup() {
 // Open modal
 function openModal() {
   isModalOpen.value = true
-  // Refresh directory info when opening modal
-  backupDirectoryName.value = getBackupDirectoryName()
 }
 
 // Close modal
@@ -79,50 +66,6 @@ function getNextBackupTimeString() {
 // Update the countdown timer
 function updateCountdown() {
   nextBackupTime.value = getNextBackupTimeString()
-}
-
-// Choose a directory for backups
-async function chooseBackupDirectory() {
-  if (!window.showDirectoryPicker) {
-    if (props.onBackupFailed) {
-      props.onBackupFailed('Directory picker is not supported in this browser')
-    }
-    return
-  }
-
-  try {
-    isSelectingDirectory.value = true
-
-    // Show directory picker
-    const dirHandle = await window.showDirectoryPicker()
-
-    // Save the directory handle
-    const success = await saveDirectoryHandle(dirHandle)
-    if (success) {
-      backupDirectoryName.value = dirHandle.name
-      if (props.onBackupCreated) {
-        props.onBackupCreated(`Backup directory set to: ${dirHandle.name}`)
-      }
-    } else {
-      throw new Error('Failed to get permission for the selected directory')
-    }
-  } catch (error) {
-    console.error('Error selecting directory:', error)
-    if (props.onBackupFailed) {
-      props.onBackupFailed(error.message || 'Failed to select directory')
-    }
-  } finally {
-    isSelectingDirectory.value = false
-  }
-}
-
-// Clear the backup directory setting
-function resetBackupDirectory() {
-  clearBackupDirectory()
-  backupDirectoryName.value = null
-  if (props.onBackupCreated) {
-    props.onBackupCreated('Backup directory reset to default (downloads folder)')
-  }
 }
 
 // Setup timer for countdown
@@ -179,29 +122,9 @@ onBeforeUnmount(() => {
               automatically backed up hourly while you use the application.
             </p>
             <p>Backups are saved as JSON files that can be imported later if needed.</p>
-          </div>
-
-          <!-- Backup directory selector -->
-          <div
-            v-if="isDirectoryPickerSupported"
-            class="p-4 rounded-lg border-[1px] border-gray-700"
-          >
-            <h4 class="font-semibold text-lg mb-2">Backup Location</h4>
-            <div v-if="backupDirectoryName" class="flex items-center justify-between mb-2">
-              <p>
-                Current directory: <span class="text-primary">{{ backupDirectoryName }}</span>
-              </p>
-              <button @click="resetBackupDirectory" class="btn btn-sm">Reset</button>
-            </div>
-            <p v-else class="mb-2">Backups are currently saved to your downloads folder.</p>
-            <button
-              @click="chooseBackupDirectory"
-              class="btn"
-              :class="{ loading: isSelectingDirectory }"
-              :disabled="isSelectingDirectory"
-            >
-              {{ backupDirectoryName ? 'Change Directory' : 'Select Directory' }}
-            </button>
+            <p class="mt-2">
+              All backups will be downloaded to your browser's default downloads folder.
+            </p>
           </div>
 
           <div

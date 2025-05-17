@@ -12,8 +12,7 @@ import TrashButton from './components/TrashButton.vue'
 import UndoLastBlockDelete from './components/UndoLastBlockDelete.vue'
 import { useKanbanStore } from './stores/kanban'
 import { useTrashStore } from './stores/trash'
-// import { setupAutoBackup, backupLocalStorage } from './lib/backup' // Commenting out backupLocalStorage as its only usage is commented out
-import { setupAutoBackup } from './lib/backup'
+import { setupAutoBackup, backupLocalStorage } from './lib/backup'
 import { ref, onMounted, computed } from 'vue'
 import LoginForm from './components/LoginForm.vue'
 import { supabase } from './lib/supabase'
@@ -27,22 +26,43 @@ const session = ref(null)
 const showUpdatePasswordForm = ref(false)
 const passwordRecoverySignal = ref(false)
 
+const DEV_SNAPSHOT_KEY = 'ru-mega-kanban-dev-snapshot'
+const LOCALSTORAGE_DATA_KEY = 'ru-mega-kanban-data'
+const LOCALSTORAGE_PROJECT_NAME_KEY = 'ru-mega-kanban-project-name'
+const LAST_PAGELOAD_BACKUP_DATE_KEY = 'ru-mega-kanban-last-pageload-backup-date'
+
 const hasDeletedBlocks = computed(() => {
   return trashStore.trashedItems.blocks.length > 0
 })
 
 function reloadData() {
   kanbanStore.loadFromSupabase()
-  // triggerBackup()
+  triggerBackup(false)
 }
 
-/* // Commenting out as per user action and to avoid linter warning
-async function triggerBackup() {
+async function triggerBackup(isUserInitiated = false) {
   try {
+    if (!isUserInitiated) {
+      const today = new Date().toISOString().split('T')[0]
+      const lastBackupDate = localStorage.getItem(LAST_PAGELOAD_BACKUP_DATE_KEY)
+      if (lastBackupDate === today) {
+        console.log('Page load backup already performed today. Skipping.')
+        if (notificationRef.value) {
+          // Optionally notify the user, or just log it
+          // notificationRef.value.showNotification('Daily page load backup already done.', 'info')
+        }
+        return // Skip backup
+      }
+    }
+
     await backupLocalStorage(
       (fileName) => {
         if (notificationRef.value) {
           notificationRef.value.showNotification(`Backup created: ${fileName}`, 'success')
+        }
+        if (!isUserInitiated) {
+          const today = new Date().toISOString().split('T')[0]
+          localStorage.setItem(LAST_PAGELOAD_BACKUP_DATE_KEY, today)
         }
       },
       (error) => {
@@ -57,7 +77,53 @@ async function triggerBackup() {
     }
   }
 }
-*/
+
+function takeQuickSnapshot() {
+  const mainData = localStorage.getItem(LOCALSTORAGE_DATA_KEY)
+  const projectName = localStorage.getItem(LOCALSTORAGE_PROJECT_NAME_KEY)
+
+  if (mainData) {
+    localStorage.setItem(DEV_SNAPSHOT_KEY, JSON.stringify({ mainData, projectName }))
+    if (notificationRef.value) {
+      notificationRef.value.showNotification('Dev snapshot taken.', 'info')
+    }
+  } else {
+    if (notificationRef.value) {
+      notificationRef.value.showNotification('No data to snapshot.', 'warn')
+    }
+  }
+}
+
+function restoreQuickSnapshot() {
+  const snapshotStr = localStorage.getItem(DEV_SNAPSHOT_KEY)
+  if (snapshotStr) {
+    try {
+      const snapshot = JSON.parse(snapshotStr)
+      localStorage.setItem(LOCALSTORAGE_DATA_KEY, snapshot.mainData)
+      if (snapshot.projectName !== null && snapshot.projectName !== undefined) {
+        localStorage.setItem(LOCALSTORAGE_PROJECT_NAME_KEY, snapshot.projectName)
+      } else {
+        localStorage.removeItem(LOCALSTORAGE_PROJECT_NAME_KEY)
+      }
+      if (notificationRef.value) {
+        notificationRef.value.showNotification('Dev snapshot restored. Reloading...', 'success')
+      }
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (e) {
+      console.error('Error parsing dev snapshot:', e)
+      if (notificationRef.value) {
+        notificationRef.value.showNotification(
+          'Failed to restore snapshot: corrupted data.',
+          'error',
+        )
+      }
+    }
+  } else {
+    if (notificationRef.value) {
+      notificationRef.value.showNotification('No dev snapshot found.', 'warn')
+    }
+  }
+}
 
 function handleBackupCreated(fileName) {
   if (notificationRef.value) {
@@ -239,6 +305,20 @@ function handlePasswordUpdated() {
           class="uppercase text-xl bg-transparent border-b-2 border-transparent hover:border-base-300 focus:border-primary focus:outline-none px-1 w-full sm:w-auto"
         />
         <div class="flex items-center gap-4">
+          <button
+            @click="takeQuickSnapshot"
+            class="btn btn-xs btn-outline btn-info"
+            title="Take a quick local developer snapshot"
+          >
+            Dev Snapshot
+          </button>
+          <button
+            @click="restoreQuickSnapshot"
+            class="btn btn-xs btn-outline btn-warning"
+            title="Restore the last dev snapshot"
+          >
+            Restore Snap
+          </button>
           <HiddenColumns
             :hiddenColumns="mainBoardRef?.hiddenColumns"
             :columns="kanbanStore.columns"
